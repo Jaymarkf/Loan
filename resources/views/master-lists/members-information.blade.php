@@ -42,6 +42,11 @@
         ✅ {{ session('success') }}
     </div>
 @endif
+@if (session('error'))
+    <div class="mb-4 rounded-lg bg-red-100 border border-red-300 text-red-800 px-4 py-3 text-sm max-w-max" role="alert">
+        ❌ {{ session('error') }}
+    </div>
+@endif
            
 <table id="myTable" class="table table-bordered table-striped w-full">
     <thead>
@@ -53,6 +58,7 @@
             <th>Last Name</th>
             <th>Gender</th>
             <th>Birthday</th>
+            <th>Status</th>
         </tr>
     </thead>
     <tbody>
@@ -64,12 +70,13 @@
                         <button onclick="openModal( {{$member->id}})" class="hover:bg-orange-600 btn btn-primary bordered bg-orange-500 text-white px-2 py-1 rounded-md mr-3 cursor-pointer"><i class="fa fa-eye"></i>/ <i class="fa fa-edit"></i> </button>
                         <button class="hover:bg-red-700 btn btn-danger bg-red-500 text-white px-2 py-1 rounded-md cursor-pointer"> <i class="fa fa-trash-can"></i> Delete</button>
                     </td>
-                    <td>{{ $member->id }}</td>
+                    <td>{{ $member->member->member_id }}</td>
                     <td>{{ $member->first_name }}</td>
                     <td>{{ $member->middle_name ?? 'N/A' }}</td> <!-- Handle nullable middle_name -->
                     <td>{{ $member->last_name }}</td>
                     <td>{{ $member->gender }}</td>
                     <td>{{ $member->birthday }}</td>
+                    <td>{{ $member->member->status }}</td>
                 </tr>
             @endforeach
         @endif
@@ -101,7 +108,7 @@
     <!-- First Name -->
                 <div class="mb-4">
                     <label for="first_name" class="block text-sm font-medium text-gray-700">First Name</label>
-                    <input type="text" name="first_name" id="first_name" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    <input autocomplete="first_name" type="text" name="first_name" id="first_name" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
                 </div>
 
                 <!-- Middle Name -->
@@ -184,31 +191,41 @@
 
                 <!-- Region ID -->
                 <div class="mb-4">
-                    <label for="regions_id" class="block text-sm font-medium text-gray-700">Region ID</label>
-                    <input type="text" name="regions_id" id="regions_id" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    <label for="region_entity_id" class="block text-sm font-medium text-gray-700">Region</label>
+                    <select name="region_entity_id" id="region_entity_id" class="w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded pl-3 pr-8 py-2 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-400 shadow-sm focus:shadow-md appearance-none cursor-pointer">
+                           @foreach($regions as $region)
+                                <option value="{{ $region->id }}"
+                                    {{ isset($member) && $member->regions_id == $region->id ? 'selected' : '' }}>
+                                    {{ $region->reg_desc }}
+                                </option>
+                            @endforeach
+                    </select>
                 </div>
-
                 <!-- Province ID -->
                 <div class="mb-4">
-                    <label for="provinces_id" class="block text-sm font-medium text-gray-700">Province ID</label>
-                    <input type="text" name="provinces_id" id="provinces_id" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    <label for="provinces_id" class="block text-sm font-medium text-gray-700">Province </label>
+                    <select name="provinces_id" id="provinces_id" class="w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded pl-3 pr-8 py-2 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-400 shadow-sm focus:shadow-md appearance-none cursor-pointer">
+                    @foreach($provinces as $province)
+                        <option value="{{$province->id}}">{{ $province->prov_desc }}</option>
+                     @endforeach
+                    </select>
                 </div>
 
                 <!-- Municipality ID -->
                 <div class="mb-4">
-                    <label for="municipalities_id" class="block text-sm font-medium text-gray-700">Municipality ID</label>
+                    <label for="municipalities_id" class="block text-sm font-medium text-gray-700">Municipality </label>
                     <input type="text" name="municipalities_id" id="municipalities_id" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
                 </div>
 
                 <!-- Barangay ID -->
                 <div class="mb-4">
-                    <label for="barangays_id" class="block text-sm font-medium text-gray-700">Barangay ID</label>
+                    <label for="barangays_id" class="block text-sm font-medium text-gray-700">Barangay </label>
                     <input type="text" name="barangays_id" id="barangays_id" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
                 </div>
 
                 <!-- Country ID -->
                 <div class="mb-4">
-                    <label for="countries_id" class="block text-sm font-medium text-gray-700">Country ID</label>
+                    <label for="countries_id" class="block text-sm font-medium text-gray-700">Country </label>
                     <input type="text" name="countries_id" id="countries_id" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
                 </div>
 
@@ -231,7 +248,7 @@
                 </div>
                 <!-- Photo Section -->
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700">Photo</label>
+                    <span class="block text-sm font-medium text-gray-700">Photo</span>
                     <div class="relative w-40 h-40 group">
                         <img id="photo_preview"
                             src="https://placehold.co/200x200/EEE/31343C?font=montserrat&text=No+Photo"
@@ -257,7 +274,7 @@
 
                 <!-- Signature Section -->
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700">Signature</label>
+                    <span class="block text-sm font-medium text-gray-700">Signature</span>
                     <div class="relative w-40 h-40 group">
                         <img id="signature_preview"
                             src="https://placehold.co/200x200/EEE/31343C?font=montserrat&text=No+Signature"
@@ -337,7 +354,14 @@
             const PHOTO_API_BASE = "{{ config('app.photo_api') }}";
             Object.entries(data).forEach(([key, value]) => {
                 const input = document.getElementById(key);
-                
+                if(key == 'province_entity_id'){
+                    let provSelect = document.querySelector('#provinces_id');
+                    if (provSelect) {
+                        provSelect.value = value;  // where value is the province_entity_id you want to select
+                    }
+                }
+
+
                 // Skip setting value on file inputs
                 if (input && input.type !== 'file') {
                     input.value = value;
@@ -352,6 +376,10 @@
                     const img = document.getElementById('signature_preview');
                     if (img) img.src = `${PHOTO_API_BASE}/${value}`;
                 }
+
+ 
+
+
             });
             var hider = document.querySelectorAll('.hide_me_first');
             hider.forEach(function(element) {

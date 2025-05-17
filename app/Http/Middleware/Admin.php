@@ -19,7 +19,7 @@ class Admin
 
         // If user is not authenticated and trying to access protected routes, block
         if (!Auth::check() && !in_array($path, ['/', 'login'])) {
-            abort(403);
+            return redirect('/')->with('message', 'Session expired. Please login again.');
         }
 
         // Allow the request

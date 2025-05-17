@@ -17,6 +17,8 @@ class PersonalInformation extends Model
 
     // Define the fillable fields (to allow mass assignment)
     protected $fillable = [
+        'member_id',
+        'external_id',
         'first_name',
         'middle_name',
         'last_name',
@@ -43,6 +45,11 @@ class PersonalInformation extends Model
         'signature',
     ];
 
+
+    public function member()
+        {
+            return $this->belongsTo(Member::class, 'member_id', 'id');
+        }
     // Optional: Define relationships if you have foreign keys (e.g., municipality, barangay)
     public function city()
     {

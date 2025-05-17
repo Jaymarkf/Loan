@@ -11,13 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('members', function (Blueprint $table) {
+        Schema::create('sub_informations', function (Blueprint $table) {
             $table->id();
-            $table->string('member_id');
-            $table->enum('status', ['PENDING', 'APPROVED', 'REJECTED'])->default('PENDING');
-            $table->string('email_address')->unique();
-            $table->date('member_since_date');
-            $table->boolean('is_synced')->default(false);
+            $table->foreignId('members_id')->constrained()->onDelete('cascade'); // Assuming a foreign key relation
+            $table->string('information_type'); // Type like "DEPENDENT"
+            $table->json('sub_information'); // To store JSON data like the one in your example
             $table->timestamps();
         });
     }
@@ -27,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('members');
+        Schema::dropIfExists('sub_information');
     }
 };

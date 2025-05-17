@@ -43,7 +43,7 @@
                                     <a href="#" class="menus"><i class="fa fa-font-awesome "></i> Account Verifier</a>
                                 </li>
                                 <li>
-                                    <a href="#" class="menus"><i class="fa fa-font-awesome "></i> Co-Maker Verifier</a>
+                                    <a href="/co-maker-verifier" class="menus"><i class="fa fa-font-awesome "></i> Co-Maker Verifier</a>
                                 </li>
                                 <li>
                                     <a href="#" class="menus"><i class="fa fa-font-awesome "></i> Loan Balance Forwarded</a>
@@ -154,7 +154,7 @@
                     </ul>
             </section>
             <header class="main-header float-left w-[calc(100%-256px)]">
-                <div class="container-user bg-blue-400 w-full h-16 flex items-center justify-between px-4">
+                <div class="container-user bg-[#33722c] w-full h-16 flex items-center justify-between px-4">
                     <div class="user-info flex items-center">
                         <!-- <img src="{{ asset('images/user.png') }}" alt="User" class="w-10 h-10 rounded-full">
                         <span class="ml-2 text-white">User Name</span> -->

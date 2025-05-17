@@ -16,7 +16,7 @@ return new class extends Migration
             // Foreign key referencing 'id' in 'members' table
             $table->unsignedBigInteger('member_id');
             $table->foreign('member_id')->references('id')->on('members')->onDelete('cascade');
-            $table->string('exteral_member_id');
+            $table->string('external_member_id');
             $table->string('first_name');
             $table->string('middle_name')->nullable();
             $table->string('last_name');
@@ -36,11 +36,12 @@ return new class extends Migration
             $table->foreignId('municipalities_id')->constrained('cities');
             $table->foreignId('barangays_id')->constrained('barangays');
             $table->unsignedBigInteger('countries_id')->constrained('countries');
-            $table->string('employee_number')->unique();
+            $table->string('employee_number');
             $table->enum('employee_status', ['regular', 'probationary', 'contractual', 'resigned'])->default('regular');
             $table->string('college_or_department')->nullable();
             $table->string('photo')->nullable();
             $table->string('signature')->nullable();
+            $table->boolean('is_edited')->default(false);
             $table->timestamps();
         });
     }
@@ -48,6 +49,8 @@ return new class extends Migration
     /**
      * Reverse the migrations.
      */
+    
+
     public function down(): void
     {
         Schema::dropIfExists('personal_information');

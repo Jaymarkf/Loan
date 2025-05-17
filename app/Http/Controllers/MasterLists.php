@@ -7,11 +7,29 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
 use App\Models\PersonalInformation;
 use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
+use App\Models\Region;
+use App\Models\Province;
 
 class MasterLists extends Controller
 {
     //
+    public function fetchLoans(){
+        $data = [
+            "SECRET" => "COOPAPP_22221123123",
+            "API_KEY" => "aTvYImp99i"
+        ];
+
+        $response = Http::asForm()->post('https://bsu-mpcm.com/api/v1/get_unsynced_loans', $data);
+
+        if ($response->successful()) {
+            $responseData = $response->json(); 
+           dd($responseData);
+        } else {
+            return response()->json(['error' => 'Request failed'], 500);
+        }
+    }
     public function fetchMember(){
         $data = [
             "SECRET" => "COOPAPP_22221123123",
@@ -33,106 +51,112 @@ class MasterLists extends Controller
        dd($dd);
     }
     function showMember(){
-        $members = PersonalInformation::all();
-        return view('master-lists.members-information',compact('members'));
+        $members = PersonalInformation::with('member')->get();
+        $regions = Region::all();
+        $provinces = Province::all();
+        return view('master-lists.members-information',compact('members','regions','provinces'));
     }
-    public function syncProfile(){
-            $members = $this->fetchMember();
+function syncProfile()
+{
+    $data = $this->fetchMember(); // from API
 
-            if (!$members || !is_array($members)) {
-                return response()->json(['error' => 'No data found'], 404);
-            }
-            DB::beginTransaction();
-            try {
-                foreach ($members as $key => $member) {
-                    try {
-                        $value = $member['profile'];
-                        $photoPath = null;
-                        if (!empty($value['photo'])) {
-                            try {
-                                // Prepend your configured base URL
-                                $photoUrl = rtrim(config('app.photo_api'), '/') . '/' . ltrim($value['photo'], '/');
-                                $photoContents = file_get_contents($photoUrl);
-                                if ($photoContents !== false) {
-                                    $photoExtension = pathinfo(parse_url($photoUrl, PHP_URL_PATH), PATHINFO_EXTENSION) ?: 'jpg';
-                                    $photoName = 'photos/' . uniqid('photo_', true) . '.' . $photoExtension;
-                                    Storage::disk('public')->put($photoName, $photoContents);
-                                    $photoPath = $photoName;
-                                }
-                            } catch (\Exception $e) {
-                                Log::warning('Failed to download photo.', [
-                                    'photo_url' => $photoUrl,
-                                    'error' => $e->getMessage(),
-                                ]);
-                            }
-                        }
-                        $signaturePhotoPath = null;
-                        if (!empty($value['photo'])) {
-                            try {
-                                // Prepend your configured base URL
-                                $photoUrl = rtrim(config('app.photo_api'), '/') . '/' . ltrim($value['photo'], '/');
-                                $photoContents = file_get_contents($photoUrl);
-                                if ($photoContents !== false) {
-                                    $photoExtension = pathinfo(parse_url($photoUrl, PHP_URL_PATH), PATHINFO_EXTENSION) ?: 'jpg';
-                                    $photoName = 'photos/' . uniqid('photo_', true) . '.' . $photoExtension;
-                                    Storage::disk('public')->put($photoName, $photoContents);
-                                    $signaturePhotoPath = $photoName;
-                                }
-                            } catch (\Exception $e) {
-                                Log::warning('Failed to download photo.', [
-                                    'photo_url' => $photoUrl,
-                                    'error' => $e->getMessage(),
-                                ]);
-                            }
-                        }
-                        $data = [
-                            'first_name' => $value['first_name'],
-                            'middle_name' => $value['middle_name'] ?? null,
-                            'last_name' => $value['last_name'],
-                            'gender' => $value['gender'] ?? null,
-                            'birthday' => $value['birthday'],
-                            'civil_status' => $value['civil_status'] ?? null,
-                            'house_status' => $value['house_status'] ?? null,
-                            'name_on_check' => $value['name_on_check'] ?? null,
-                            'employment_date' => $value['employment_date'] ?? null,
-                            'contributions_percentage' => $value['contributions_percentage'] ?? 0.00,
-                            'tin_number' => $value['tin_number'] ?? null,
-                            'phone_number_1' => $value['phone_number_1'] ?? null,
-                            'phone_number_2' => $value['phone_number_2'] ?? null,
-                            'address_1' => $value['address_1'] ?? null,
-                            'regions_id' => $value['regions_id'],
-                            'provinces_id' => $value['provinces_id'],
-                            'municipalities_id' => (int) $value['cities_id'], // Make sure this is integer
-                            'barangays_id' => $value['barangays_id'],
-                            'countries_id' => $value['countries_id'],
-                            'employee_number' => $value['employee_number'],
-                            'employee_status' => $value['employee_status'] ?? 'regular',
-                            'college_or_department' => $value['college_or_department'] ?? null,
-                            'photo' =>  $photoPath ?? null,
-                            'signature' => $signaturePhotoPath ?? null,
-                        ];
-                        PersonalInformation::create($data);
-                    } catch (\Exception $e) {
-                        Log::error('Failed to insert profile', [
-                            'error' => $e->getMessage(),
-                            'data' => $value,
-                        ]);
-                        // Continue to the next record instead of failing all
-                        continue;
-                    }
+    try {
+        DB::transaction(function () use ($data) {
+            $memberIdMap = [];
+
+            foreach ($data as $member) {
+                // Check if member already exists based on unique email or member_id
+                $existing = DB::table('members')->where('email_address', $member['email_address'])->first();
+
+                if ($existing) {
+                    throw new \Exception('Member has already been synchronized.');
                 }
-                DB::commit();
-                return redirect()->route('members-information')->with('success', 'Sync successful');
 
-            } catch (\Exception $e) {
-                DB::rollBack();
-                Log::critical('Sync profile transaction failed.', [
-                    'error' => $e->getMessage(),
+                $internalId = DB::table('members')->insertGetId([
+                    'member_id'         => $member['member_id'],
+                    'status'            => $member['status'],
+                    'email_address'     => $member['email_address'],
+                    'member_since_date' => $member['member_since_date'],
+                    'is_synced'         => $member['is_synced'],
                 ]);
-                return response()->json(['error' => 'Sync failed'], 500);
-            }
-    }
 
+                $memberIdMap[$member['id']] = $internalId;
+            }
+
+            // Insert profile_informations
+            $profileRows = array_map(function ($member) use ($memberIdMap) {
+                $externalId = $member['id'];
+                $internalId = $memberIdMap[$externalId];
+                $profile = $member['profile'];
+
+                return [
+                    'member_id'            => $internalId,
+                    'external_member_id'   => $externalId,
+                    'first_name'           => $profile['first_name'],
+                    'middle_name'          => $profile['middle_name'] ?? null,
+                    'last_name'            => $profile['last_name'],
+                    'gender'               => $profile['gender'],
+                    'birthday'             => $profile['birthday'],
+                    'civil_status'         => $profile['civil_status'],
+                    'house_status'         => $profile['house_status'],
+                    'name_on_check'        => $profile['name_on_check'],
+                    'employment_date'      => $profile['employment_date'],
+                    'contributions_percentage' => $profile['contributions_percentage'],
+                    'tin_number'           => $profile['tin_number'],
+                    'phone_number_1'       => $profile['phone_number_1'],
+                    'phone_number_2'       => $profile['phone_number_2'],
+                    'address_1'            => $profile['address_1'],
+                    'regions_id'           => $profile['regions_id'],
+                    'provinces_id'         => $profile['provinces_id'],
+                    'municipalities_id'    => $profile['cities_id'],
+                    'barangays_id'         => $profile['barangays_id'],
+                    'countries_id'         => $profile['countries_id'],
+                    'employee_number'      => $profile['employee_number'],
+                    'employee_status'      => $profile['employee_status'],
+                    'college_or_department'=> $profile['college_or_department'],
+                    'photo'                => $profile['photo'],
+                    'signature'            => $profile['signature'],
+                ];
+            }, $data);
+
+            DB::table('personal_informations')->insert($profileRows);
+
+            $subRows = array_map(function ($member) use ($memberIdMap) {
+                $externalId = $member['id'];
+                $internalId = $memberIdMap[$externalId];
+
+                return array_map(function ($sub) use ($internalId) {
+                    return [
+                        'members_id'        => $internalId,
+                        'information_type'  => $sub['information_type'],
+                        'sub_information'   => json_encode($sub['sub_information'], JSON_UNESCAPED_UNICODE),
+                    ];
+                }, $member['sub_information']);
+            }, $data);
+
+            $subRows = array_merge(...$subRows);
+            DB::table('sub_informations')->insert($subRows);
+        });
+
+        return redirect()->route('members-information')->with('success', 'Synchronization successful.');
+    } catch (\Exception $e) {
+        return redirect()->route('members-information')->with('error', 'Member has already been synchronized.');
+    }
+}
+
+     public function getPersonInfo($person)
+    {
+        // Search members by name (adjust columns as needed)
+        $results = PersonalInformation::join('members', 'personal_informations.member_id', '=', 'members.id')
+        ->where('name_on_check', 'LIKE', "%{$person}%")
+        ->where('members.status', 'approved')
+        ->select('personal_informations.id', 'personal_informations.name_on_check as name')
+        ->limit(10)
+        ->get();
+
+        return response()->json($results);
+    }
+    
     function getPerson($personId) {
         $person = PersonalInformation::with(['region','province', 'city', 'barangay'])->findOrFail($personId);
         $pp = [
@@ -160,7 +184,11 @@ class MasterLists extends Controller
             'employee_status'=>$person->employee_status,
             'college_or_department'=>$person->college_or_department,
             'photo'=>$person->photo,
-            'signature'=>$person->signature
+            'signature'=>$person->signature,
+            'region_entity_id' => $person->regions_id,
+            'province_entity_id' => $person->provinces_id,
+            'municipality_entity_id' => $person->municipalities_id,
+            'barangay_entity_id' => $person->barangays_id
         ];
   
         return response()->json($pp);

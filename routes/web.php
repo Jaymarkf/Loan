@@ -42,5 +42,12 @@ Route::middleware(['master'])->group(function () {
     Route::get('/person/{person}',[MasterLists::class,'getPerson'])->name('get-person');
     Route::post('/update-person',[MasterLists::class,'updatePerson'])->name('update-person');
     Route::get('/dd',[MasterLists::class,'debugMember'])->name('debug-member');
+    Route::get('/loan',[MasterLists::class,'fetchLoans'])->name('fetch-loans');
 
+    Route::get('/person-info/{person}', [MasterLists::class, 'getPersonInfo'])->name('get-person-info');
+
+    //Loan Management
+    Route::get('/co-maker-verifier', function () {
+        return view('loan-management.co-maker-verifier');
+    });
 });
